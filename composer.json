@@ -1,0 +1,18 @@
+{
+    "name": "ynsinc/make-ris",
+    "description": "Provides Artisan commands to generate Repository, Interface, and Service classes, simplifying the use of the Repository pattern in Laravel.",
+    "type": "clibrary",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "YnsInc\\MakeRis\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "glsarmenta",
+            "email": "glsarmenta7@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev"
+}
