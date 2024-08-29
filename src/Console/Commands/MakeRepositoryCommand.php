@@ -90,26 +90,55 @@ use App\Interfaces{$namespace}\\{$className}Interface;
 
 class {$className}Repository implements {$className}Interface
 {
+    /**
+     * Retrieve a specific record.
+     *
+     * @return mixed
+     */
     public function get()
     {
         // Implement get method
     }
 
+    /**
+     * Retrieve all records.
+     *
+     * @return mixed
+     */
     public function all()
     {
         // Implement all method
     }
 
+    /**
+     * Create a new record.
+     *
+     * @param array \$data
+     * @return mixed
+     */
     public function create(array \$data)
     {
         // Implement create method
     }
 
+    /**
+     * Update an existing record.
+     *
+     * @param int \$id
+     * @param array \$data
+     * @return mixed
+     */
     public function update(\$id, array \$data)
     {
         // Implement update method
     }
 
+    /**
+     * Delete a record.
+     *
+     * @param int \$id
+     * @return mixed
+     */
     public function delete(\$id)
     {
         // Implement delete method
@@ -132,18 +161,24 @@ use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
 {
+    /**
+     * Register any application services.
+     */
     public function register()
     {
         // Register bindings here
     }
 
+    /**
+     * Bootstrap any application services.
+     */
     public function boot()
     {
         //
     }
 }
 PHP;
-            File::put($providerPath, $providerContent . PHP_EOL);
+            File::put($providerPath, $providerContent );
         }
 
         $binding = "\$this->app->bind(\\App\\Interfaces{$namespace}\\{$className}Interface::class, \\App\\Repositories{$namespace}\\{$className}Repository::class);";

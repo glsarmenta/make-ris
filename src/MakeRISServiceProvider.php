@@ -10,7 +10,6 @@ class MakeRISServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \YnsInc\MakeRIS\Console\Commands\MakeRIS::class,
                 \YnsInc\MakeRIS\Console\Commands\MakeRepositoryCommand::class,
                 \YnsInc\MakeRIS\Console\Commands\MakeServiceCommand::class
             ]);
