@@ -25,7 +25,7 @@ class MakeRepositoryCommand extends Command
             return;
         }
 
-        $className = $name ?: $model;
+        $className = ucfirst($name ?: $model);
         $directory = $subdir ? $subdir . '/' : '';
         $namespace = $subdir ? '\\' . str_replace('/', '\\', $subdir) : '';
 
@@ -70,10 +70,43 @@ namespace App\Interfaces{$namespace};
 
 interface {$className}Interface
 {
+    /**
+     * Retrieve a single resource.
+     *
+     * @return mixed The resource object or data.
+     */
     public function get();
+
+    /**
+     * Retrieve all resources.
+     *
+     * @return array An array containing all resource objects or data.
+     */
     public function all();
+
+    /**
+     * Create a new resource with the provided data.
+     *
+     * @param array \$data The data for creating the resource.
+     * @return mixed The created resource object or status.
+     */
     public function create(array \$data);
+
+    /**
+     * Update an existing resource identified by the provided ID with the given data.
+     *
+     * @param mixed \$id The ID of the resource to be updated.
+     * @param array \$data The updated data for the resource.
+     * @return mixed The updated resource object or status.
+     */
     public function update(\$id, array \$data);
+
+    /**
+     * Delete a resource identified by the provided ID.
+     *
+     * @param mixed \$id The ID of the resource to be deleted.
+     * @return mixed The status of the deletion or result.
+     */
     public function delete(\$id);
 }
 PHP;
@@ -178,7 +211,7 @@ class RepositoryServiceProvider extends ServiceProvider
     }
 }
 PHP;
-            File::put($providerPath, $providerContent );
+            File::put($providerPath, $providerContent);
         }
 
         $binding = "\$this->app->bind(\\App\\Interfaces{$namespace}\\{$className}Interface::class, \\App\\Repositories{$namespace}\\{$className}Repository::class);";
