@@ -214,13 +214,23 @@ PHP;
             File::put($providerPath, $providerContent);
         }
 
-        $binding = "\$this->app->bind(\\App\\Interfaces{$namespace}\\{$className}Interface::class, \\App\\Repositories{$namespace}\\{$className}Repository::class);";
-        $providerContent = File::get($providerPath);
+        $providerBinding = "\\App\\Interfaces{$namespace}\\{$className}Interface::class, \\App\\Repositories{$namespace}\\{$className}Repository::class";
 
-        if (strpos($providerContent, $binding) === false) {
-            $providerContent = str_replace('// Register bindings here', "// Register bindings here\n        {$binding}", $providerContent);
-            File::put($providerPath, $providerContent . PHP_EOL);
-            $this->info("Bound {$className}Interface to {$className}Repository in RepositoryServiceProvider.");
+        // Add to bootstrap/providers.php in Laravel 11
+        $providersPath = base_path('bootstrap/providers.php');
+        if (File::exists($providersPath)) {
+            $content = File::get($providersPath);
+            if (strpos($content, $providerBinding) === false) {
+                $content = preg_replace(
+                    '/return \\[(.*?)/s',
+                    "return [\n    $providerBinding,\n\$1",
+                    $content
+                );
+                File::put($providersPath, $content);
+                $this->info("Bound {$className}Interface to {$className}Repository in bootstrap/providers.php.");
+            }
+        } else {
+            $this->error('bootstrap/providers.php not found.');
         }
     }
 }
