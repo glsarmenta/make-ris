@@ -87,7 +87,7 @@ interface {$className}Interface
     /**
      * Create a new resource with the provided data.
      *
-     * @param array \$data The data for creating the resource.
+     * @param array<mixed> \$data The data for creating the resource.
      * @return mixed The created resource object or status.
      */
     public function create(array \$data);
@@ -95,8 +95,8 @@ interface {$className}Interface
     /**
      * Update an existing resource identified by the provided ID with the given data.
      *
-     * @param mixed \$id The ID of the resource to be updated.
-     * @param array \$data The updated data for the resource.
+     * @param \$id The ID of the resource to be updated.
+     * @param array<mixed> \$data The updated data for the resource.
      * @return mixed The updated resource object or status.
      */
     public function update(\$id, array \$data);
@@ -146,7 +146,7 @@ class {$className}Repository implements {$className}Interface
     /**
      * Create a new record.
      *
-     * @param array \$data
+     * @param array<mixed> \$data
      * @return mixed
      */
     public function create(array \$data)
@@ -158,7 +158,7 @@ class {$className}Repository implements {$className}Interface
      * Update an existing record.
      *
      * @param int \$id
-     * @param array \$data
+     * @param array<mixed> \$data
      * @return mixed
      */
     public function update(\$id, array \$data)
@@ -196,6 +196,8 @@ class RepositoryServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
+     *
+     * @return void
      */
     public function register()
     {
@@ -204,6 +206,8 @@ class RepositoryServiceProvider extends ServiceProvider
 
     /**
      * Bootstrap any application services.
+     *
+     * @return void
      */
     public function boot()
     {
