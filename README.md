@@ -15,12 +15,12 @@ Install the package via Composer:
 ```bash
 composer require ynsinc/make-ris:dev-main
 ```
-Register the commands in app/Console/Kernel.php:
+Register the providers in bootstrap/providers.php
 
 ```php
-protected $commands = [
-    \App\Console\Commands\MakeRepositoryCommand::class,
-    \App\Console\Commands\MakeServiceCommand::class,
+return [
+    ..,
+    YnsInc\MakeRIS\MakeRISServiceProvider::class,
 ];
 ```
 ## Usage
