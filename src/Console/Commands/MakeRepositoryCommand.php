@@ -1,4 +1,5 @@
 <?php
+
 namespace YnsInc\MakeRIS\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -9,6 +10,9 @@ class MakeRepositoryCommand extends Command
     protected $signature = 'make:repository {--model=} {--subdir=} {--name=}';
     protected $description = 'Create a new repository and interface';
 
+    /**
+     * Handle the command execution.
+     */
     public function handle()
     {
         $model = $this->option('model');
@@ -20,221 +24,309 @@ class MakeRepositoryCommand extends Command
             return;
         }
 
-        if ($this->hasOptionWithEmptyValue('subdir') || $this->hasOptionWithEmptyValue('model') || $this->hasOptionWithEmptyValue('name')) {
+        if (
+            $this->hasOptionWithEmptyValue('subdir') ||
+            $this->hasOptionWithEmptyValue('model') ||
+            $this->hasOptionWithEmptyValue('name')
+        ) {
             $this->error('Empty values are not accepted for the provided options.');
             return;
         }
 
         $className = ucfirst($name ?: $model);
         $directory = $subdir ? $subdir . '/' : '';
-        $namespace = $subdir ? '\\' . str_replace('/', '\\', $subdir) : '';
+        $namespace = $subdir ? "App\\Repositories\\$subdir" : 'App\\Repositories';
+        $interfaceNamespace = $subdir ? "App\\Interfaces\\$subdir" : 'App\\Interfaces';
 
-        $interfacePath = app_path("Interfaces/{$directory}{$className}Interface.php");
-        $repositoryPath = app_path("Repositories/{$directory}{$className}Repository.php");
+        $this->ensureBaseFilesExist();
 
-        $this->createFile($interfacePath, $this->getInterfaceContent($className, $namespace));
-        $this->createFile($repositoryPath, $this->getRepositoryContent($className, $namespace));
-        
-        $this->bindRepositoryToInterface($className, $namespace);
-
-        $this->info("{$className}Interface and {$className}Repository created successfully.");
+        $this->createInterface($className, $interfaceNamespace, $directory);
+        $this->createRepository($className, $namespace, $interfaceNamespace, $directory, $model);
     }
 
-    protected function createFile($path, $content)
+    /**
+     * Ensure base interface and repository files exist.
+     */
+    protected function ensureBaseFilesExist()
     {
-        if (File::exists($path)) {
-            if (!$this->confirm("The file {$path} already exists. Do you want to overwrite it?")) {
-                $this->info("Skipped: {$path}");
-                return;
-            }
+        $interfacePath = app_path('Interfaces/BaseInterface.php');
+        $repositoryPath = app_path('Repositories/BaseRepository.php');
+
+        if (!File::exists($interfacePath)) {
+            File::put($interfacePath, $this->getBaseInterfaceContent());
         }
 
-        File::ensureDirectoryExists(dirname($path));
-        File::put($path, $content . PHP_EOL);
-        File::chmod($path, 0755); // Set automatic permissions
-        $this->info("Created: {$path}");
+        if (!File::exists($repositoryPath)) {
+            File::put($repositoryPath, $this->getBaseRepositoryContent());
+        }
     }
 
-    protected function hasOptionWithEmptyValue($option)
+    /**
+     * Create an interface file if it does not exist.
+     *
+     * @param string $className
+     * @param string $namespace
+     * @param string $directory
+     */
+    protected function createInterface(string $className, string $namespace, string $directory)
     {
-        $value = $this->option($option);
-        return $value !== null && $value === '';
-    }
+        $path = app_path("Interfaces/{$directory}{$className}Interface.php");
+        $directoryPath = app_path('Interfaces' . ($directory ? "/{$directory}" : ''));
 
-    protected function getInterfaceContent($className, $namespace)
-    {
-        return <<<PHP
+        // Ensure the directory exists before creating the file
+        File::ensureDirectoryExists($directoryPath, 0755, true);
+
+        if (!File::exists($path)) {
+            $content = <<<EOD
 <?php
 
-namespace App\Interfaces{$namespace};
+namespace $namespace;
 
-interface {$className}Interface
+use App\Interfaces\BaseInterface;
+
+interface {$className}Interface extends BaseInterface
 {
-    /**
-     * Retrieve a single resource.
-     *
-     * @return mixed The resource object or data.
-     */
-    public function get();
-
-    /**
-     * Retrieve all resources.
-     *
-     * @return array An array containing all resource objects or data.
-     */
-    public function all();
-
-    /**
-     * Create a new resource with the provided data.
-     *
-     * @param array<mixed> \$data The data for creating the resource.
-     * @return mixed The created resource object or status.
-     */
-    public function create(array \$data);
-
-    /**
-     * Update an existing resource identified by the provided ID with the given data.
-     *
-     * @param \$id The ID of the resource to be updated.
-     * @param array<mixed> \$data The updated data for the resource.
-     * @return mixed The updated resource object or status.
-     */
-    public function update(\$id, array \$data);
-
-    /**
-     * Delete a resource identified by the provided ID.
-     *
-     * @param mixed \$id The ID of the resource to be deleted.
-     * @return mixed The status of the deletion or result.
-     */
-    public function delete(\$id);
 }
-PHP;
+
+EOD;
+            File::put($path, $content);
+        }
     }
 
-    protected function getRepositoryContent($className, $namespace)
-    {
-        return <<<PHP
+    /**
+     * Create a repository file if it does not exist.
+     *
+     * @param string $className
+     * @param string $namespace
+     * @param string $interfaceNamespace
+     * @param string $directory
+     * @param string|null $model
+     */
+    protected function createRepository(
+        string $className,
+        string $namespace,
+        string $interfaceNamespace,
+        string $directory,
+        ?string $model
+    ) {
+        $path = app_path("Repositories/{$directory}{$className}Repository.php");
+        $directoryPath = app_path('Repositories' . ($directory ? "/{$directory}" : ''));
+
+        // Ensure the directory exists before creating the file
+        File::ensureDirectoryExists($directoryPath, 0755, true);
+
+        if (!File::exists($path)) {
+            $content = <<<EOD
 <?php
 
-namespace App\Repositories{$namespace};
+namespace $namespace;
 
-use App\Interfaces{$namespace}\\{$className}Interface;
+use $interfaceNamespace\\{$className}Interface;
+use App\Repositories\BaseRepository;
+use App\Models\\{$className};
 
-class {$className}Repository implements {$className}Interface
+class {$className}Repository extends BaseRepository implements {$className}Interface
 {
     /**
-     * Retrieve a specific record.
+     * Constructor
      *
+     * @param \App\Models\\{$className} \${$this->camelCase($className)} The model instance.
+     */
+    public function __construct({$className} \${$this->camelCase($className)})
+    {
+        parent::__construct(\${$this->camelCase($className)});
+    }
+}
+
+EOD;
+            File::put($path, $content);
+        }
+    }
+
+    /**
+     * Convert a string to camelCase.
+     *
+     * @param string $string
+     * @return string
+     */
+    protected function camelCase(string $string): string
+    {
+        return lcfirst($string);
+    }
+
+    /**
+     * Get the content for BaseInterface.php.
+     *
+     * @return string
+     */
+    protected function getBaseInterfaceContent(): string
+    {
+        return <<<EOD
+<?php
+
+namespace App\Interfaces;
+
+/**
+ * Interface BaseInterface
+ *
+ * Defines the contract for basic CRUD operations.
+ */
+interface BaseInterface
+{
+    /**
+     * Retrieve all records.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection A collection of model instances.
+     */
+    public function all(): \Illuminate\Database\Eloquent\Collection;
+
+    /**
+     * Find a record by ID.
+     *
+     * @param int \$id The ID of the record.
      * @return mixed
      */
-    public function get()
+    public function find(int \$id): mixed;
+
+    /**
+     * Create a new record.
+     *
+     * @param array<mixed> \$data The data for the new record.
+     * @return \Illuminate\Database\Eloquent\Model The created model instance.
+     */
+    public function create(array \$data): \Illuminate\Database\Eloquent\Model;
+
+    /**
+     * Update an existing record.
+     *
+     * @param int \$id The ID of the record to update.
+     * @param array<mixed> \$data The updated data.
+     * @return \Illuminate\Database\Eloquent\Model The updated model instance.
+     */
+    public function update(int \$id, array \$data): \Illuminate\Database\Eloquent\Model;
+
+    /**
+     * Delete a record by ID.
+     *
+     * @param int|array<mixed> \$ids The ID or an array of IDs to delete.
+     * @return bool|null True if at least one record was deleted, false otherwise.
+     */
+    public function delete(int|array \$ids): ?bool;
+}
+
+EOD;
+    }
+
+    /**
+     * Get the content for BaseRepository.php.
+     *
+     * @return string
+     */
+    protected function getBaseRepositoryContent(): string
     {
-        // Implement get method
+        return <<<EOD
+<?php
+
+namespace App\Repositories;
+
+use App\Interfaces\BaseInterface;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class BaseRepository
+ *
+ * This class provides a base implementation of common database operations
+ * for Eloquent models, following the repository pattern.
+ */
+class BaseRepository implements BaseInterface
+{
+    /**
+     * @var Model The Eloquent model instance.
+     */
+    protected Model \$model;
+
+    /**
+     * BaseRepository constructor.
+     *
+     * @param Model \$model The model instance to be used.
+     */
+    public function __construct(Model \$model)
+    {
+        \$this->model = \$model;
     }
 
     /**
      * Retrieve all records.
      *
+     * @return Collection A collection of model instances.
+     */
+    public function all(): Collection
+    {
+        return \$this->model->all();
+    }
+
+    /**
+     * Find a record by ID.
+     *
+     * @param int \$id The ID of the record.
      * @return mixed
      */
-    public function all()
+    public function find(int \$id): mixed
     {
-        // Implement all method
+        return \$this->model->findOrFail(\$id);
     }
 
     /**
      * Create a new record.
      *
-     * @param array<mixed> \$data
-     * @return mixed
+     * @param array<mixed> \$data The data for the new record.
+     * @return Model The created model instance.
      */
-    public function create(array \$data)
+    public function create(array \$data): Model
     {
-        // Implement create method
+        return \$this->model->create(\$data);
     }
 
     /**
      * Update an existing record.
      *
-     * @param int \$id
-     * @param array<mixed> \$data
-     * @return mixed
+     * @param int \$id The ID of the record to update.
+     * @param array<mixed> \$data The updated data.
+     * @return Model The updated model instance.
      */
-    public function update(\$id, array \$data)
+    public function update(int \$id, array \$data): Model
     {
-        // Implement update method
+        \$record = \$this->model->findOrFail(\$id);
+        \$record->update(\$data);
+
+        return \$record;
     }
 
     /**
-     * Delete a record.
+     * Delete one or multiple records by ID.
      *
-     * @param int \$id
-     * @return mixed
+     * @param int|array<mixed> \$ids The ID or an array of IDs to delete.
+     * @return bool True if at least one record was deleted, false otherwise.
      */
-    public function delete(\$id)
+    public function delete(int|array \$ids): bool
     {
-        // Implement delete method
+        return \$this->model->destroy(\$ids) > 0;
     }
 }
-PHP;
-    }
 
-    protected function bindRepositoryToInterface($className, $namespace)
-    {
-        $providerPath = app_path('Providers/RepositoryServiceProvider.php');
-
-        if (!File::exists($providerPath)) {
-            $providerContent = <<<PHP
-<?php
-
-namespace App\Providers;
-
-use Illuminate\Support\ServiceProvider;
-
-class RepositoryServiceProvider extends ServiceProvider
-{
-    /**
-     * Register any application services.
-     *
-     * @return void
-     */
-    public function register()
-    {
-        // Register bindings here
+EOD;
     }
 
     /**
-     * Bootstrap any application services.
+     * Determine if a given option has an empty string as its value.
      *
-     * @return void
+     * @param string $option The name of the option to check.
+     * @return bool True if the option exists and its value is an empty string, false otherwise.
      */
-    public function boot()
+    protected function hasOptionWithEmptyValue(string $option): bool
     {
-        //
-    }
-}
-PHP;
-            File::put($providerPath, $providerContent);
-        }
-
-        $providerBinding = "\\App\\Interfaces{$namespace}\\{$className}Interface::class, \\App\\Repositories{$namespace}\\{$className}Repository::class";
-
-        // Add to bootstrap/providers.php in Laravel 11
-        $providersPath = base_path('bootstrap/providers.php');
-        if (File::exists($providersPath)) {
-            $content = File::get($providersPath);
-            if (strpos($content, $providerBinding) === false) {
-                $content = preg_replace(
-                    '/return \\[(.*?)/s',
-                    "return [\n    $providerBinding,\n\$1",
-                    $content
-                );
-                File::put($providersPath, $content);
-                $this->info("Bound {$className}Interface to {$className}Repository in bootstrap/providers.php.");
-            }
-        } else {
-            $this->error('bootstrap/providers.php not found.');
-        }
+        $value = $this->option($option);
+        return $value !== null && $value === '';
     }
 }
